@@ -14,7 +14,7 @@ vi.mock("../../hooks/useLocale", () => ({
   }),
 }));
 
-import InlineDashboard, { barHeight, barOpacity } from "./InlineDashboard";
+import InlineDashboard, { barHeight, barOpacity, summaryKpis } from "./InlineDashboard";
 import type { InlineDashboardModel } from "../../lib/inlineDashboard";
 
 const model: InlineDashboardModel = {
@@ -66,6 +66,34 @@ function renderExpanded(dashboard: InlineDashboardModel = model) {
   fireEvent.click(screen.getByRole("button", { name: /Cost/ }));
   return view;
 }
+
+describe("summaryKpis", () => {
+  const kpi = (title: string) => ({ title, value: "1", emphasis: false });
+  const titles = (list: ReturnType<typeof summaryKpis>) => list.map((entry) => entry.title);
+
+  it("takes today and the second KPI in the four-KPI layouts", () => {
+    expect(titles(summaryKpis([kpi("Today"), kpi("30d cost"), kpi("Latest"), kpi("30d tokens")]))).toEqual([
+      "Today",
+      "30d cost",
+    ]);
+  });
+
+  it("takes the History KPI, not the quota window, in the six-KPI layout", () => {
+    const six = [
+      kpi("Today"),
+      kpi("Current window"),
+      kpi("Latest"),
+      kpi("Window tokens"),
+      kpi("30d cost"),
+      kpi("30d tokens"),
+    ];
+    expect(titles(summaryKpis(six))).toEqual(["Today", "30d cost"]);
+  });
+
+  it("copes with a single KPI", () => {
+    expect(titles(summaryKpis([kpi("Today")]))).toEqual(["Today"]);
+  });
+});
 
 describe("InlineDashboard", () => {
   it("starts collapsed with the Cost title and a two-line summary", () => {

@@ -95,6 +95,12 @@ describe("tray card stylesheet", () => {
     expect(track).toContain("width: auto");
   });
 
+  it("gives the All tab room for a localized label and lets it spill instead of clipping", () => {
+    const first = ".menu-surface--tray .provider-grid--tabs[data-tab-layout=\"row\"] .provider-grid__item:first-child";
+    expect(ruleBlock(tray, first)).toContain("flex: 0 0 38px");
+    expect(ruleBlock(tray, `${first} .provider-grid__label`)).toContain("overflow: visible");
+  });
+
   it("sets the tray panel on a tinted surface with no frame", () => {
     const surface = ruleBlock(tray, ".menu-surface--tray");
     expect(surface).toContain("background: var(--mac-panel-fill)");

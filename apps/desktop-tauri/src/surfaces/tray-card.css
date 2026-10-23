@@ -781,7 +781,7 @@
   display: flex;
   flex-wrap: nowrap;
   gap: 2px;
-  padding: 4px 10px 8px;
+  padding: 4px 6px 8px;
   margin: 0;
 }
 
@@ -797,11 +797,18 @@
   min-height: 36px;
   justify-content: center;
   gap: 2px;
-  padding: 5px 2px 8px;
+  padding: 5px 1px 8px;
 }
 
+/* The All tab is wider and lets its label spill past the box, so the longest
+   localized short label (full-width "すべて") is never clipped. */
 .menu-surface--tray .provider-grid--tabs[data-tab-layout="row"] .provider-grid__item:first-child {
-  flex: 0 0 34px;
+  flex: 0 0 38px;
+}
+
+.menu-surface--tray .provider-grid--tabs[data-tab-layout="row"] .provider-grid__item:first-child .provider-grid__label {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 /* With few providers the tabs keep a natural width instead of stretching. */

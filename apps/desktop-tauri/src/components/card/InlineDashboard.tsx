@@ -1,6 +1,10 @@
 import { useId, useState, type CSSProperties } from "react";
 import { useLocale } from "../../hooks/useLocale";
-import type { DashboardPoint, InlineDashboardModel } from "../../lib/inlineDashboard";
+import type {
+  DashboardKpi,
+  DashboardPoint,
+  InlineDashboardModel,
+} from "../../lib/inlineDashboard";
 
 /**
  * Upstream frames the chart at 58 px: a 13 px caption2 scale line, a 2 px gap,
@@ -68,8 +72,19 @@ function UsageBars({
   );
 }
 
-/** Collapsed summary: the two leading KPIs (today and the History window). */
-const SUMMARY_KPI_COUNT = 2;
+/** The model's six-KPI layout (a History window longer than the quota window). */
+const SIX_KPI_LAYOUT = 6;
+const SIX_KPI_HISTORY_INDEX = 4;
+
+/**
+ * Collapsed summary: today, then the selected History window. In the six-KPI
+ * layout that window follows the quota window's KPIs; elsewhere it is the
+ * second KPI.
+ */
+export function summaryKpis(kpis: DashboardKpi[]): DashboardKpi[] {
+  const history = kpis.length === SIX_KPI_LAYOUT ? kpis[SIX_KPI_HISTORY_INDEX] : kpis[1];
+  return [kpis[0], history].filter((kpi): kpi is DashboardKpi => kpi != null);
+}
 
 /**
  * The card's Cost section (upstream `InlineUsageDashboardContent`): a titled,
@@ -106,7 +121,7 @@ export default function InlineDashboard({
       </button>
       {!expanded && (
         <div className="card-dash__summary">
-          {model.kpis.slice(0, SUMMARY_KPI_COUNT).map((kpi) => (
+          {summaryKpis(model.kpis).map((kpi) => (
             <span className="card-dash__summary-line" key={kpi.title}>
               {kpi.title}: {kpi.value}
             </span>

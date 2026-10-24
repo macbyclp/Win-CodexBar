@@ -45,6 +45,8 @@ import type {
   SessionFocusResult,
   TrayVisibilityStatusDto,
   UsageSpendSummary,
+  CodexSessionDetailCheckpoint,
+  CodexSessionDetails,
   CodexSessionToolActivity,
   CodexAccount,
   CodexAccountUsageSnapshot,
@@ -369,6 +371,23 @@ export function getCodexSessionToolActivity(
   });
 }
 
+/**
+ * Request-level usage of one Codex conversation, read on demand. Rejects with a
+ * `CodexSessionDetailError` code; `sourceChanged` means the logs moved past
+ * the summary in `checkpoint`.
+ */
+export function getCodexSessionDetails(
+  sessionId: string,
+  checkpoint: CodexSessionDetailCheckpoint,
+  historyDays?: number,
+): Promise<CodexSessionDetails> {
+  return invoke<CodexSessionDetails>("get_codex_session_details", {
+    sessionId,
+    historyDays: historyDays ?? null,
+    checkpoint,
+  });
+}
+
 export function writeUsageSpendExport(path: string, payload: string): Promise<void> {
   return invoke<void>("write_usage_spend_export", { path, payload });
 }
@@ -659,6 +678,11 @@ export function revealTrayPanelWindow(): Promise<void> {
 
 export function getSystemAccentColor(): Promise<string | null> {
   return invoke<string | null>("get_system_accent_color");
+}
+
+/** The Windows app-theme setting; the native windows are pinned Dark, so the webview cannot read it. */
+export function getSystemTheme(): Promise<"light" | "dark"> {
+  return invoke<"light" | "dark">("get_system_theme");
 }
 
 export function quitApp(): Promise<void> {

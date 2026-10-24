@@ -10,6 +10,7 @@ use super::{
 };
 use crate::providers::AerostackProvider;
 use crate::providers::AtlasCloudProvider;
+use crate::providers::ChatboxProvider;
 use crate::providers::ClaudePlatformProvider;
 use crate::providers::ClawRouterProvider;
 use crate::providers::CosmicProvider;
@@ -26,6 +27,7 @@ use crate::providers::MuseAIProvider;
 use crate::providers::ParallelProvider;
 use crate::providers::SyntheticProvider;
 use crate::providers::TavilyProvider;
+use crate::providers::TraeCnProvider;
 use crate::providers::WorkBuddyProvider;
 use crate::providers::{
     AbacusProvider, AiAndProvider, AixyProvider, AlibabaProvider, AlibabaTokenPlanProvider,
@@ -166,6 +168,8 @@ pub fn instantiate(id: ProviderId) -> Box<dyn Provider> {
         ProviderId::Munito => Box::new(MunitoProvider::new()),
         ProviderId::Soniox => Box::new(SonioxProvider::new()),
         ProviderId::ClaudePlatform => Box::new(ClaudePlatformProvider::new()),
+        ProviderId::TraeCn => Box::new(TraeCnProvider::new()),
+        ProviderId::Chatbox => Box::new(ChatboxProvider::new()),
     }
 }
 
@@ -287,7 +291,9 @@ pub fn pace_capability(id: ProviderId) -> ProviderPaceCapability {
         | ProviderId::FutureAgi
         | ProviderId::Munito
         | ProviderId::Soniox
-        | ProviderId::ClaudePlatform => ProviderPaceCapability::UNSUPPORTED,
+        | ProviderId::ClaudePlatform
+        | ProviderId::TraeCn
+        | ProviderId::Chatbox => ProviderPaceCapability::UNSUPPORTED,
     }
 }
 
@@ -409,7 +415,9 @@ pub fn limit_reset_policy(id: ProviderId) -> ProviderLimitResetPolicy {
         | ProviderId::FutureAgi
         | ProviderId::Munito
         | ProviderId::Soniox
-        | ProviderId::ClaudePlatform => ProviderLimitResetPolicy::DEFAULT,
+        | ProviderId::ClaudePlatform
+        | ProviderId::TraeCn
+        | ProviderId::Chatbox => ProviderLimitResetPolicy::DEFAULT,
     }
 }
 
@@ -531,7 +539,9 @@ pub(crate) fn cost_cli_extension_for(id: ProviderId) -> Option<&'static dyn Cost
         | ProviderId::FutureAgi
         | ProviderId::Munito
         | ProviderId::Soniox
-        | ProviderId::ClaudePlatform => None,
+        | ProviderId::ClaudePlatform
+        | ProviderId::TraeCn
+        | ProviderId::Chatbox => None,
     }
 }
 

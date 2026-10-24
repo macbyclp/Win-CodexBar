@@ -18,6 +18,7 @@ import { useProviderStatuses } from "./useProviderStatuses";
 import { useSettings } from "./useSettings";
 import { useUpdateState } from "./useUpdateState";
 import { useLocale } from "./useLocale";
+import { useNow } from "./useNow";
 import { useProviderSwitcherKeys } from "./useProviderSwitcherKeys";
 import { useSurfaceTarget } from "./useSurfaceMode";
 import { useTrayPanelLayout } from "./useTrayPanelLayout";
@@ -187,12 +188,15 @@ export function useTrayPanelController(state: BootstrapState) {
     };
   }, [actionProviderId]);
   const serviceStatuses = useProviderStatuses();
+  // Re-read the clock so "updated N ago" status text keeps advancing.
+  const nowMs = useNow();
   // macOS `MenuDescriptor.statusLine`: the selected provider, else the first
   // enabled one, whether or not it has a usage snapshot yet.
   const statusLine = serviceStatusLine(
     serviceStatuses,
     selectedProviderId ?? denseProviderSlots[0]?.id ?? null,
     t,
+    nowMs,
   );
   const links =
     providerLinks !== null && providerLinks.providerId === actionProviderId

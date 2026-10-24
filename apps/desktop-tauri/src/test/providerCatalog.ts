@@ -109,4 +109,6 @@ export const TEST_PROVIDER_CATALOG: Array<[string, string]> = [
   ["munito", "Munito"],
   ["soniox", "Soniox"],
   ["claudeplatform", "Claude Platform"],
+  ["traecn", "Trae CN"],
+  ["chatbox", "Chatbox AI"],
 ];

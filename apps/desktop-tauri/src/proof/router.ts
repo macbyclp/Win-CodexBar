@@ -16,6 +16,7 @@ import {
 } from "../surfaces/settings/settingsTabs";
 import type { ProofScenario } from "./fixtures/scenarios";
 import {
+  codexSessionDetails,
   codexSessionToolActivity,
   proofAppInfo,
   proofCurrencyRates,
@@ -108,6 +109,8 @@ export interface ProofRouterOptions {
   window: ProofWindow;
   tab: string;
   now?: Date;
+  /** What `get_system_theme` reports (the Windows app theme). Dark when omitted. */
+  systemTheme?: "light" | "dark";
 }
 
 export interface ProofRouter {
@@ -277,6 +280,7 @@ export function createProofRouter(
     apply_http_server_config: (args) =>
       applyHttpServer(argsRecord(args.config) as unknown as HttpServerConfig),
     get_system_accent_color: () => "#4c8bf5",
+    get_system_theme: () => options.systemTheme ?? "dark",
     // A fixed 1080p desktop minus the taskbar: headless browsers report a
     // small `screen`, which would cap the tray panel's auto-fit height.
     get_work_area_rect: () => ({ x: 0, y: 0, width: 1920, height: 1032 }),
@@ -433,6 +437,8 @@ export function createProofRouter(
     get_codex_workspaces_snapshot: () => null,
     get_codex_session_tool_activity: (args) =>
       codexSessionToolActivity(current(), stringArg(args, "sessionId")),
+    // The shell rejects with a bare error code string.
+    get_codex_session_details: (args) => codexSessionDetails(current(), stringArg(args, "sessionId")),
     get_safe_diagnostics: () => "Proof build: mocked IPC, no diagnostics collected.",
     // Window and shell side effects are no-ops in a browser.
     dismiss_tray_panel: () => null,

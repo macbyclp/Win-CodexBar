@@ -8,7 +8,10 @@ import type {
   CodexAccount,
   CodexAccountsStateBridge,
   CodexAccountUsageSnapshot,
+  CodexSessionDetailError,
+  CodexSessionDetails,
   CodexSessionToolActivity,
+  CodexSessionTurn,
   CodexToolOperation,
   CodexWorkspacesSessionUsage,
   DetectedBrowserBridge,
@@ -19,6 +22,7 @@ import type {
   SpendModelRow,
   TokenAccountBridge,
 } from "../../types/bridge";
+import { ukLocaleOverrides } from "../locale";
 import {
   PROOF_PROVIDER_CATALOG,
   baseSettings,
@@ -48,9 +52,11 @@ export const PROOF_SCENARIO_NAMES = [
   "overview-tcr-accounts-private",
   "codex-conversations",
   "codex-conversations-private",
+  "codex-session-inspector",
   "claude-reset-credits",
   "claude-reset-credits-hidden",
   "kpi-long-titles",
+  "uk-regen-countdown",
   "claudeplatform",
   "cookie-no-browsers",
   "vercel",
@@ -88,6 +94,10 @@ export interface ProofScenario {
   codexConversations?: CodexWorkspacesSessionUsage[];
   /** Per-session Codex tool activity, unredacted; the router redacts it under Hide personal information. */
   codexToolActivity?: CodexSessionToolActivity[];
+  /** Per-session request-level usage; a session with neither details nor an error is unavailable. */
+  codexSessionDetails?: CodexSessionDetails[];
+  /** Code `get_codex_session_details` rejects with, by session id. */
+  codexSessionDetailErrors?: Record<string, CodexSessionDetailError>;
   /** Per-model rows in the Codex Usage & Spend contract; a null token count renders as unknown. */
   codexSpendModels?: SpendModelRow[];
   /** Browsers the cookie section detects; absent means the router's default pair. */
@@ -1017,6 +1027,70 @@ function codexConversationsScenario(now: Date): ProofScenario {
   };
 }
 
+function proofTurn(
+  turnId: string | null,
+  firstActivity: string | null,
+  requests: [string, number, number, number, number | null][],
+): CodexSessionTurn {
+  const rows = requests.map(([timestamp, input, cached, output, costUsd], index) => ({
+    id: `request-${index}`,
+    modelName: "gpt-5-codex",
+    timestamp,
+    inputTokens: input,
+    cachedInputTokens: cached,
+    outputTokens: output,
+    reasoningTokens: Math.round(output / 3),
+    totalTokens: input + output,
+    costUsd,
+  }));
+  const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + pick(row), 0);
+  const priced = rows.every((row) => row.costUsd !== null);
+  return {
+    turnId,
+    firstActivity,
+    lastActivity: turnId === null ? null : (rows[rows.length - 1]?.timestamp ?? null),
+    inputTokens: sum((row) => row.inputTokens),
+    cachedInputTokens: sum((row) => row.cachedInputTokens),
+    outputTokens: sum((row) => row.outputTokens),
+    reasoningTokens: sum((row) => row.reasoningTokens),
+    totalTokens: sum((row) => row.totalTokens),
+    requestCount: rows.length,
+    costUsd: priced ? sum((row) => row.costUsd ?? 0) : null,
+    requests: rows,
+  };
+}
+
+/** Three conversations for the Sessions inspector: one with request details, one over the limit, one unavailable. */
+function codexSessionInspectorScenario(now: Date): ProofScenario {
+  const detailed = "019f0000-0000-7000-8000-00000000b001";
+  const large = "019f0000-0000-7000-8000-00000000b002";
+  const stale = "019f0000-0000-7000-8000-00000000b003";
+  return {
+    ...defaultScenario(now),
+    name: "codex-session-inspector",
+    codexConversations: [
+      codexConversation(now, detailed, "Port the session inspector", 15, 0.4213),
+      codexConversation(now, large, "Index the archived rollouts", 240, 7.5),
+      codexConversation(now, stale, "Review the parser fixture", 60, 1.2),
+    ],
+    codexSessionDetails: [
+      {
+        sessionId: detailed,
+        requestCount: 4,
+        turns: [
+          proofTurn("turn-one", isoBefore(now, 30), [
+            [isoBefore(now, 30), 60_000, 40_000, 3_000, 0.12],
+            [isoBefore(now, 29), 64_000, 48_000, 2_400, 0.1013],
+          ]),
+          proofTurn("turn-two", isoBefore(now, 20), [[isoBefore(now, 20), 50_000, 30_000, 3_200, 0.15]]),
+          proofTurn(null, null, [[isoBefore(now, 16), 10_000, 2_000, 800, 0.05]]),
+        ],
+      },
+    ],
+    codexSessionDetailErrors: { [large]: "limitExceeded" },
+  };
+}
+
 /** The same conversations with Hide personal information on. */
 function codexConversationsPrivateScenario(now: Date): ProofScenario {
   const base = codexConversationsScenario(now);
@@ -1090,6 +1164,36 @@ function kpiLongTitlesScenario(now: Date): ProofScenario {
         ],
       },
     ],
+  };
+}
+
+/**
+ * Default data with Claude's session window marked as regenerating, shown under
+ * the shipped uk-UA strings. The reset is 2 days 3 hours 30 minutes away; the
+ * countdown rounds up to whole minutes, so it reads "2 дн. 3 год" (uk-UA) and
+ * "Regenerates in 2d 3h" (en-US) for the first few minutes after load.
+ */
+function ukRegenCountdownScenario(now: Date): ProofScenario {
+  const base = defaultScenario(now);
+  const resetsAt = isoAfter(now, 2 * DAY_MINUTES + 3 * 60 + 30);
+  return {
+    ...base,
+    name: "uk-regen-countdown",
+    localeOverrides: ukLocaleOverrides([
+      "RegeneratesCountdown",
+      "RegeneratesNow",
+      "DurationDaysHours",
+      "DurationDaysMinutes",
+      "DurationDays",
+      "DurationHoursMinutes",
+      "DurationHours",
+      "DurationMinutes",
+    ]),
+    providers: base.providers.map((snap) => {
+      if (snap.providerId !== "claude") return snap;
+      const primary = { ...snap.primary, resetsAt, resetRegenerates: true };
+      return { ...snap, primary, selectedMetric: primary };
+    }),
   };
 }
 
@@ -1238,9 +1342,11 @@ const BUILDERS: Record<ProofScenarioName, (now: Date) => ProofScenario> = {
   "overview-tcr-accounts-private": (now) => overviewTcrAccountsScenario(now, true),
   "codex-conversations": codexConversationsScenario,
   "codex-conversations-private": codexConversationsPrivateScenario,
+  "codex-session-inspector": codexSessionInspectorScenario,
   "claude-reset-credits": (now) => claudeResetCreditsScenario(now, false),
   "claude-reset-credits-hidden": (now) => claudeResetCreditsScenario(now, true),
   "kpi-long-titles": kpiLongTitlesScenario,
+  "uk-regen-countdown": ukRegenCountdownScenario,
   claudeplatform: claudePlatformScenario,
   "cookie-no-browsers": cookieNoBrowsersScenario,
   vercel: vercelScenario,
